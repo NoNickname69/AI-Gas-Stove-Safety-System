@@ -273,18 +273,18 @@ Alerts are throttled (max 1 per 3 seconds) and dispatched to non-blocking daemon
 ⚠  WARNING
    UNATTENDED STOVE DETECTED! (8s without person)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+```
 ## Screenshots
 
 ### Normal Monitoring State
 
-![Normal State](AI-Gas-Stove-Safety-System\AI-Gas-Stove-Safety-System\{datasets,screenshots,videos,models,src}\Screenshot1.png)
+![Normal State](screenshots\Screenshot1.png)
 
 ---
 
 ### High Risk Alert
 
-![High Risk Alert](AI-Gas-Stove-Safety-System\AI-Gas-Stove-Safety-System\{datasets,screenshots,videos,models,src}\Screenshot2.png)
+![High Risk Alert](screenshots\Screenshot2.png)
 
 ## Future Improvements
 
@@ -297,14 +297,11 @@ The codebase is deliberately structured for extensibility. Here are the planned 
 ### 🟡 Medium Priority
 - [ ] **Telegram alerts** — `alerts.py` already has the stub. Needs `python-telegram-bot` and a bot token.
 - [ ] **Proximity logic** — Use IoU (`utils.iou()`) to check whether the detected person is actually near the stove region, not just anywhere in the frame.
-- [ ] **Video file input** — Accept a `.mp4` path as an argument instead of the webcam.
 
 ### 🟢 Nice to Have
 - [ ] **Raspberry Pi deployment** — The pipeline runs on CPU and is lightweight enough for a Pi 4. Add GPIO buzzer via `alerts._gpio_buzzer_alert()`.
 - [ ] **LLM-generated warnings** — Use Claude or GPT-4 Vision to generate a natural-language description of the scene when an alert fires.
 - [ ] **Mobile push notifications** — Implement `alerts._mobile_push_alert()` with Pushover or Firebase Cloud Messaging.
-- [ ] **Web dashboard** — A lightweight Flask page showing the live feed and alert history.
-- [ ] **Multi-camera support** — Monitor multiple stove burners with multiple capture devices.
 
 ---
 
