@@ -281,19 +281,17 @@ Alerts are throttled (max 1 per 3 seconds) and dispatched to non-blocking daemon
 
 > _Add your own screenshots after running the project._
 
-| Normal State | High Risk Alert |
-|---|---|
-| `screenshots/normal_state.jpg` | `screenshots/high_risk_alert.jpg` |
+## Screenshots
 
-To capture a screenshot programmatically, add this to `main.py`:
+### Normal Monitoring State
 
-```python
-from utils import save_screenshot
-if risk_level == "HIGH":
-    save_screenshot(frame)
-```
+![Normal State](screenshots/screenshot1.png)
 
 ---
+
+### High Risk Alert
+
+![High Risk Alert](screenshots/screenshot2.png)
 
 ## Future Improvements
 
