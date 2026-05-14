@@ -273,25 +273,18 @@ Alerts are throttled (max 1 per 3 seconds) and dispatched to non-blocking daemon
 ⚠  WARNING
    UNATTENDED STOVE DETECTED! (8s without person)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
----
-
-## Screenshots
-
-> _Add your own screenshots after running the project._
 
 ## Screenshots
 
 ### Normal Monitoring State
 
-![Normal State](screenshots/screenshot1.png)
+![Normal State](AI-Gas-Stove-Safety-System\AI-Gas-Stove-Safety-System\{datasets,screenshots,videos,models,src}\Screenshot1.png)
 
 ---
 
 ### High Risk Alert
 
-![High Risk Alert](screenshots/screenshot2.png)
+![High Risk Alert](AI-Gas-Stove-Safety-System\AI-Gas-Stove-Safety-System\{datasets,screenshots,videos,models,src}\Screenshot2.png)
 
 ## Future Improvements
 
