@@ -1,334 +1,207 @@
-# 🔥 AI Gas Stove Safety System
+# AI Gas Stove Safety System
 
-> **Real-time kitchen safety monitoring using YOLOv8 and OpenCV**  
-> A computer vision system that detects unattended stoves and fires an alert before accidents happen.
-
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![OpenCV](https://img.shields.io/badge/OpenCV-4.8+-green?logo=opencv)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple)
-![License](https://img.shields.io/badge/License-MIT-yellow)
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Problem Statement](#problem-statement)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [How It Works](#how-it-works)
-- [Example Output](#example-output)
-- [Screenshots](#screenshots)
-- [Future Improvements](#future-improvements)
-- [Why This Project Matters](#why-this-project-matters)
-
----
-
-## Overview
-
-The **AI Gas Stove Safety System** is a real-time computer vision application that monitors a kitchen environment through a webcam feed.
-
-It uses **YOLOv8** for object detection and **OpenCV** for video processing to:
-- Detect humans present in the kitchen
-- Detect active flames on a gas stove
-- Trigger an alert if a flame is detected but no person has been nearby for a configurable duration
-
-This project demonstrates a complete **end-to-end AI/CV pipeline**: from raw webcam input, through neural network inference, rule-based safety reasoning, and real-time UI overlays.
-
----
-
-## Problem Statement
-
-Kitchen fires are one of the leading causes of residential fires worldwide. A significant proportion of cooking fires start when food or cookware is left unattended on an active burner.
-
-**The question:** Can a low-cost camera + AI system serve as an always-on safety observer that detects this exact scenario and alerts the occupant before it becomes dangerous?
-
-This project explores that idea with a working prototype.
+A real-time computer vision prototype that watches a kitchen through a webcam, detects an active flame, and raises an alert if no person has been nearby for a configurable period of time.
 
 ---
 
 ## Features
 
-| Feature | Status |
-|---|---|
-| Real-time webcam input | ✅ |
-| YOLOv8 person detection | ✅ |
-| Flame detection (HSV heuristic) | ✅ |
-| Unattended stove logic with configurable timer | ✅ |
-| Risk level display (NORMAL / HIGH) | ✅ |
-| Bounding boxes + confidence scores | ✅ |
-| FPS counter | ✅ |
-| Console alert on HIGH risk | ✅ |
-| Sound alert (optional) | ✅ |
-| Modular, extensible codebase | ✅ |
-| Telegram / email alerts | 🔜 Stubbed |
-| Custom fire-detection model | 🔜 Planned |
-| Smoke detection | 🔜 Planned |
+- Real-time webcam capture and display loop (OpenCV)
+- Person detection using a pre-trained YOLOv8n model, filtered to the `person` class
+- Flame detection using an HSV colour-thresholding heuristic (no trained fire model — see [Known Limitations](#known-limitations))
+- Stateful "unattended stove" logic that escalates to a `HIGH` risk level once a flame has been visible for longer than a configurable threshold without a person present
+- On-screen overlays: bounding boxes with label/confidence chips, a status panel (flame / person / risk / FPS), and a full-width warning banner during a `HIGH` risk event
+- Throttled alerting: console alert and an optional sound alert, both dispatched on background daemon threads with a cooldown so repeated frames don't spam the alert channel
+- A stubbed (not implemented) Telegram alert channel, left as a documented extension point
+- Modular source layout — detection, decision logic, alerting, and rendering each live in their own file with no cross-cutting state
 
 ---
 
-## Architecture
+## Demo / Screenshots
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         main.py  (orchestrator)                  │
-│                                                                   │
-│  ┌─────────┐    ┌──────────┐    ┌─────────┐    ┌─────────────┐  │
-│  │ OpenCV  │───▶│ detector │───▶│  logic  │───▶│     ui      │  │
-│  │ webcam  │    │ (YOLOv8) │    │ (rules) │    │ (overlays)  │  │
-│  └─────────┘    └──────────┘    └────┬────┘    └─────────────┘  │
-│                                       │                           │
-│                                  ┌────▼────┐                     │
-│                                  │ alerts  │                     │
-│                                  │(console │                     │
-│                                  │ sound   │                     │
-│                                  │ future) │                     │
-│                                  └─────────┘                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+Two screenshots are included in the repository under `assests/screenshots/`:
 
-**Data flow per frame:**
-
-1. **OpenCV** captures a raw BGR frame from the webcam.
-2. **`detector.py`** runs the frame through YOLOv8 and the colour-based fire heuristic. Returns a list of detection dictionaries: `{label, confidence, bbox}`.
-3. **`logic.py`** receives `flame_detected` and `person_detected` booleans, tracks timestamps, and returns a `risk_level` + `warning_message`.
-4. **`ui.py`** draws bounding boxes, the status panel, and the warning banner onto the frame.
-5. **`alerts.py`** fires console/sound alerts when `risk_level == "HIGH"`, with a cooldown to prevent spam.
-6. The annotated frame is displayed in an OpenCV window.
-
----
-
-## Tech Stack
-
-| Tool | Version | Purpose |
-|---|---|---|
-| Python | 3.10+ | Language |
-| OpenCV | 4.8+ | Webcam capture, drawing, display |
-| Ultralytics YOLOv8 | 8.0+ | Object detection (person) |
-| NumPy | 1.24+ | Array operations, HSV masking |
-
-No web framework. No database. No cloud. Runs entirely on your local machine.
+- ![Normal monitering state](assets/screenshots/Screenshot1.png)
+- ![HIGH risk warning banner](assets/screenshots/Screenshot2.png)
 
 ---
 
 ## Project Structure
 
 ```
-AI-Gas-Stove-Safety-System/
+YOLO PROJECT FLAME STOVE/
 │
 ├── src/
-│   ├── main.py       # Entry point — webcam loop, module integration
-│   ├── detector.py   # YOLOv8 inference + colour-based fire heuristic
-│   ├── logic.py      # Rule-based safety state machine
-│   ├── ui.py         # All OpenCV drawing / overlay functions
-│   ├── alerts.py     # Alert channels (console, sound, future: Telegram)
-│   └── utils.py      # FPS calculator, resize, screenshot, IoU helpers
+│   ├── main.py       # Entry point: webcam loop, wires every module together
+│   ├── detector.py   # YOLOv8 person detection + HSV fire-colour heuristic
+│   ├── logic.py       # SafetyLogic — the unattended-stove state machine
+│   ├── ui.py          # All OpenCV drawing/overlay code
+│   ├── alerts.py       # Alert dispatch (console, sound, stubbed Telegram)
+│   └── utils.py        # FPS calculation, frame resize, screenshot saving, clamp
 │
-├── models/           # Place downloaded .pt weights here
-├── datasets/         # Future: custom training data
-├── screenshots/      # Auto-saved alert screenshots
-├── videos/           # Test video clips
+├── models/
+│   └── yolov8n.pt      # Bundled YOLOv8n weights
+│
+├── assests/
+│   ├── audio/
+│   │   └── alert.mp3   # Sound alert asset
+│   ├── images/          # Present, currently empty
+│   └── screenshots/      # Screenshot1.png, Screenshot2.png
+│
+├── docs/
+│   └── architecture.md  # Engineering-facing technical documentation (this repo's companion doc)
 │
 ├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
----
-
-## Installation
-
-### Prerequisites
-
-- Python 3.10 or higher
-- A webcam (built-in or USB)
-- Git
-
-### Steps
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/AI-Gas-Stove-Safety-System.git
-cd AI-Gas-Stove-Safety-System
-
-# 2. (Recommended) Create and activate a virtual environment
-python -m venv venv
-
-# On macOS / Linux:
-source venv/bin/activate
-
-# On Windows:
-venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
-> **Note on model weights:** The first run will automatically download `yolov8n.pt` (~6 MB) from Ultralytics. An internet connection is required for this one-time download. After that, copy the downloaded file to the `models/` directory and update `model_path` in `main.py` if needed. Alternatively, Ultralytics caches it in `~/.ultralytics/`.
+Each `src/` file exists to isolate one responsibility: `detector.py` only produces detections, `logic.py` only turns detections into a risk decision, `ui.py` only renders, and `alerts.py` only dispatches notifications. `main.py` is the only file that knows about all of them, and it does nothing except orchestrate the per-frame loop. This separation is discussed further in [architecture.md](docs/architecture.md).
 
 ---
 
-## Usage
+## Tech Stack
 
-```bash
-# From the project root directory
-cd src
-python main.py
-```
+**Language**
+- Python 3.10+ (uses `X | None` union-type hints and `list[dict]` generics, both of which require 3.9/3.10+)
 
-### Controls
+**Libraries / Frameworks**
+- [OpenCV](https://opencv.org/) (`opencv-python`) — webcam capture, HSV conversion, contour finding, all drawing, and window display
+- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) — pre-trained object detection
+- [NumPy](https://numpy.org/) — array typing for frames and HSV masks
+- `playsound` (optional, imported lazily) — plays the `.mp3` alert sound if installed
 
-| Key | Action |
-|---|---|
-| `Q` | Quit the application |
+**Model**
+- `yolov8n.pt` — the smallest/fastest Ultralytics YOLOv8 checkpoint, pre-trained on COCO (80 classes). Only the `person` class is used; the model is not fine-tuned or retrained for this project.
 
-### Configuration
-
-Open `src/main.py` and adjust these variables at the top of `main()`:
-
-```python
-WEBCAM_INDEX          = 0    # Change if your webcam isn't index 0
-FRAME_WIDTH           = 1280 # Display resolution
-FRAME_HEIGHT          = 720
-UNATTENDED_SECONDS    = 5    # Seconds before HIGH alert fires
-CONFIDENCE_THRESHOLD  = 0.4  # YOLO detection confidence minimum
-```
-
-### Testing without a gas stove
-
-- **Person detection:** Simply sit in front of your webcam.
-- **Fire simulation:** Hold a bright orange/red object (e.g. a candle or an orange card) in front of the camera.
-- **Alert test:** Step away from the camera while the "fire" object is still visible — the alert should fire after `UNATTENDED_SECONDS`.
+**Tools**
+- `threading` (standard library) — runs alert channels off the main video thread
+- `time` (standard library) — timestamps for FPS and the unattended-stove timer
 
 ---
 
 ## How It Works
 
-### 1. Person Detection (YOLOv8)
+The system runs a continuous loop: capture a frame from the webcam, resize it to a fixed resolution, run it through detection, feed the detection results into a small rule-based state machine, draw the result on top of the frame, and display it. If the state machine decides the situation is `HIGH` risk, an alert is dispatched on a background thread so the video loop is never blocked waiting on I/O (printing, playing a sound, etc.).
 
-YOLOv8n is a pre-trained convolutional neural network trained on the COCO dataset (80 classes). We use it out-of-the-box to detect the `"person"` class. Detection results include bounding box coordinates and a confidence score.
+Detection itself is two separate things running side by side on every frame: a YOLOv8 pass that looks for people, and a classical HSV colour-mask pass that looks for flame-coloured regions. There is no trained "fire" class in COCO, so the flame detector is a placeholder built from colour thresholding and contour area rather than a neural network.
 
-### 2. Fire Detection (HSV Colour Heuristic)
-
-The COCO dataset does not include a "fire" class, so we use a classical computer vision approach as a stand-in:
-
-1. Convert the frame from BGR to **HSV** colour space (Hue-Saturation-Value).
-2. Apply a colour mask for the orange–red–yellow hue range typical of flames (Hue: 0–25° and 160–180°).
-3. Perform morphological operations (opening + closing) to remove noise.
-4. Find contours and filter by minimum area (1 500 px²).
-5. Report any surviving contour as a "fire" detection.
-
-This deliberately simple method is a placeholder. It produces false positives on brightly lit orange objects — which is expected and acceptable for a prototype. The codebase is structured so that swapping in a trained fire-detection model requires changing **one file** (`detector.py`).
-
-### 3. Safety Logic
-
-```
-State: last_person_seen_time, flame_start_time
-
-Each frame:
-  IF person_detected:
-    last_person_seen_time = now
-
-  IF flame_detected AND now - last_person_seen_time >= THRESHOLD:
-    risk_level = "HIGH"
-    warning = "UNATTENDED STOVE DETECTED! (Xs without person)"
-  ELSE:
-    risk_level = "NORMAL"
-```
-
-The threshold defaults to 5 seconds and is fully configurable.
-
-### 4. Alerts
-
-Alerts are throttled (max 1 per 3 seconds) and dispatched to non-blocking daemon threads so they never slow down the video loop. Active channels: **console print** and optional **sound**. Telegram, email, GPIO, and push notifications are stubbed and ready to enable.
+The decision of whether the situation is dangerous is not based on a single frame — it is based on *how long* a flame has been visible without a person nearby. That state (timestamps of the last person sighting and the current flame's start time) lives entirely inside the `SafetyLogic` object and is updated every frame.
 
 ---
 
-## Example Output
+## Installation
 
-**Terminal output when a HIGH-risk event is detected:**
+### Prerequisites
+- Python 3.10 or higher
+- A webcam (built-in or USB)
 
+### Steps
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd "YOLO PROJECT FLAME STOVE"
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+
+# macOS / Linux
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# (Optional) install the sound-alert dependency
+pip install playsound==1.2.2
+
+# 4. Run the project
+cd src
+python src/main.py
 ```
-============================================================
-  🔥  ALERT [14:32:07]
-  UNATTENDED STOVE DETECTED! (8s without person)
-============================================================
-```
 
-**On-screen overlay:**
+Press `Q` with the OpenCV window focused to quit.
 
-```
-┌────────────────────────┐
-│ FLAME : DETECTED       │
-│ PERSON: NOT DETECTED   │
-│ RISK  : HIGH           │
-│ FPS   : 28.4           │
-└────────────────────────┘
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠  WARNING
-   UNATTENDED STOVE DETECTED! (8s without person)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-## Screenshots
-
-### Normal Monitoring State
-
-![Normal State](screenshots\Screenshot1.png)
+> **Note:** `Detector` defaults to `model_path="models/yolov8n.pt"`, which is a path relative to the process's current working directory. Since `main.py` is intended to be launched from inside `src/`, this resolves to `src/models/yolov8n.pt`, not the `models/yolov8n.pt` file that ships at the project root. See [Known Limitations](#known-limitations).
 
 ---
 
-### High Risk Alert
+## Configuration
 
-![High Risk Alert](screenshots\Screenshot2.png)
+All configuration lives as local constants at the top of `main()` in `src/main.py`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WEBCAM_INDEX` | `0` | OpenCV camera index passed to `cv2.VideoCapture` |
+| `FRAME_WIDTH` | `1280` | Width every frame is resized to before processing/display |
+| `FRAME_HEIGHT` | `720` | Height every frame is resized to before processing/display |
+| `UNATTENDED_SECONDS` | `5` | Seconds a flame may be visible without a person before risk becomes `HIGH` |
+| `CONFIDENCE_THRESHOLD` | `0.4` | Minimum YOLO confidence required to keep a `person` detection |
+
+Additional tunables that exist but are not exposed as top-level config:
+
+- `alerts._ALERT_COOLDOWN_SECONDS` (3.0s) — minimum time between repeated identical alerts
+- `detector.COCO_CLASSES_OF_INTEREST` — the set of COCO class names kept from YOLO output (currently only `"person"`)
+- The HSV lower/upper bounds and `min_fire_area` (1000 px²) inside `Detector._detect_fire_heuristic`
+
+---
 
 ## Future Improvements
 
-The codebase is deliberately structured for extensibility. Here are the planned next steps:
+**Implemented**
+- Real-time person detection (YOLOv8)
+- HSV-based flame detection
+- Unattended-stove timing logic with configurable threshold
+- Console and (optional) sound alerts with cooldown throttling
+- On-screen status panel, bounding boxes, and warning banner
 
-### 🔴 High Priority
-- [ ] **Custom YOLOv8 fire/smoke model** — Train on a fire/smoke dataset (e.g. [D-Fire](https://github.com/gaiasd/DFireDataset)) using `ultralytics train`. Replace `_detect_fire_heuristic()` in `detector.py` with a real YOLO inference call.
-- [ ] **Smoke detection** — Add a second colour-band heuristic or a dedicated class in the custom model.
+**Planned** (explicitly stubbed or referenced in code/comments)
+- Telegram alert channel — `alerts._telegram_alert` exists as an unimplemented stub with setup instructions in its docstring
+- A trained fire/smoke detection model to replace the HSV heuristic
 
-### 🟡 Medium Priority
-- [ ] **Telegram alerts** — `alerts.py` already has the stub. Needs `python-telegram-bot` and a bot token.
-- [ ] **Proximity logic** — Use IoU (`utils.iou()`) to check whether the detected person is actually near the stove region, not just anywhere in the frame.
-
-### 🟢 Nice to Have
-- [ ] **Raspberry Pi deployment** — The pipeline runs on CPU and is lightweight enough for a Pi 4. Add GPIO buzzer via `alerts._gpio_buzzer_alert()`.
-- [ ] **LLM-generated warnings** — Use Claude or GPT-4 Vision to generate a natural-language description of the scene when an alert fires.
-- [ ] **Mobile push notifications** — Implement `alerts._mobile_push_alert()` with Pushover or Firebase Cloud Messaging.
-
----
-
-## Why This Project Matters
-
-Kitchen fires cause thousands of injuries and billions of dollars in property damage every year. Most of them are preventable.
-
-This project demonstrates that a **consumer-grade webcam + a small neural network running on a laptop CPU** can provide meaningful safety monitoring. It's not a research paper — it's a working prototype that shows the full pipeline from sensor to alert.
-
-From an engineering perspective, it covers:
-
-- **Computer vision fundamentals** (colour spaces, contour analysis, morphological operations)
-- **Deep learning inference** (loading and running a pre-trained YOLOv8 model)
-- **Real-time processing** (maintaining >25 FPS with detection + drawing on a CPU)
-- **Software design** (modular architecture, separation of concerns, extensibility)
-- **Product thinking** (cooldown throttling, configurable thresholds, non-blocking alerts)
+**Ideas** (not represented in code at all)
+- Proximity-aware logic — only counting a person as "attending" the stove if they are near the stove's region of the frame, not merely anywhere in frame
+- Saving a screenshot automatically when risk becomes `HIGH` (a general-purpose `save_screenshot()` helper already exists in `utils.py` but is not called from anywhere)
+- Smoke detection as a second heuristic or model class
+- Deployment on lower-power hardware (e.g. Raspberry Pi)
 
 ---
 
-## Author
+## Known Limitations
 
-Built as a portfolio project for an AI/Computer Vision internship application.
+- **Flame detection is a colour heuristic, not a trained model.** It thresholds HSV hue ranges associated with orange/red/yellow flame and blue gas flame, then filters by contour area. It will false-positive on any sufficiently large orange, red, or blue object in frame (clothing, packaging, lighting) and will miss flames whose colour falls outside the configured ranges.
+- **The bundled model weights may not be the ones actually loaded at runtime.** `Detector`'s default `model_path` is the relative path `"models/yolov8n.pt"`. Because `main.py` is documented to be run from inside `src/`, this resolves to `src/models/yolov8n.pt` — a location that does not exist in this repository — rather than the `models/yolov8n.pt` that is checked in at the project root. Ultralytics will treat the unresolved path as a model name and attempt to auto-download it on first run.
+- **The alert sound file path does not match the assets folder name.** `alerts._sound_alert` looks for `"assets/audio/alert.mp3"`, but the repository's actual asset directory is named `assests/audio/` (note the transposed "s"/"t"). Unless the working directory happens to contain a correctly-named `assets/` folder, the sound alert will silently fall through to the terminal bell fallback.
+- **The "person seen" and "flame present" checks are frame-global, not spatial.** Any detected person anywhere in the frame counts as "attending" the stove, regardless of their distance from the flame.
+- **The `confidence` value reported for a `"fire"` detection is not a model confidence score.** It is a synthetic value derived from the pixel area of the matched contour (`min(0.95, 0.50 + area / 50000)`), used only so fire detections fit the same dictionary shape as YOLO detections.
+- **`utils.save_screenshot` and `utils.clamp` are defined but never called** anywhere in the current codebase.
+- **No automated tests exist** in the repository.
 
-Feel free to fork, extend, and deploy!
+---
+
+## Why This Architecture
+
+Each pipeline stage — detection, decision logic, alerting, and rendering — is deliberately kept in its own module with a single public entry point (`detect()`, `evaluate()`, `trigger_alert()`, `draw_ui()`). `main.py` never touches OpenCV drawing primitives, alert dispatch details, or timing logic directly; it only calls these four functions in sequence and passes data between them as plain dictionaries, booleans, and strings. This means any one stage can be replaced — for example, swapping the HSV heuristic in `detector.py` for a trained fire-detection model — without requiring changes to `logic.py`, `ui.py`, or `alerts.py`, since none of them depend on *how* a detection was produced, only on its `{label, confidence, bbox}` shape.
+
+Keeping alert dispatch on background threads (`alerts._run_in_thread`) is a direct consequence of the architecture being a live video loop: any blocking call inside the main `while True` loop (writing to a file, playing audio, making a network request) would directly reduce the frame rate. Isolating alerts behind one function (`trigger_alert`) with an internal cooldown also means the throttling logic exists in exactly one place rather than being duplicated at every call site.
+
+---
+
+## Interview Highlights
+
+- **Separation of concerns** — detection, decision-making, alerting, and rendering are four independent modules connected only through `main.py`, each with one public function.
+- **Modular / swappable detection** — `Detector.detect()` returns a uniform list of `{label, confidence, bbox}` dictionaries regardless of whether a detection came from YOLOv8 or the HSV heuristic, so downstream code (`logic.py`, `ui.py`) is detector-implementation-agnostic.
+- **Safety logic isolation** — `SafetyLogic` is a self-contained stateful class with no knowledge of OpenCV, YOLO, or drawing; it is pure timestamp arithmetic and could be unit-tested with plain floats.
+- **UI isolation** — `ui.py` exposes exactly one public function, `draw_ui()`; every other drawing routine is a private, single-purpose helper (`_draw_bounding_boxes`, `_draw_status_panel`, `_draw_warning_banner`, `_draw_watermark`).
+- **Alert abstraction** — `trigger_alert()` is the only function other modules call; which channels actually fire (console, sound, and eventually Telegram) is an internal implementation detail behind that one call, including its own cooldown/throttling state.
+- **Defensive programming** — `Detector.class_names.get(class_id, "unknown")` guards against an unexpected class id, `_draw_translucent_rect` clamps rectangle coordinates to the frame bounds before drawing, and `calculate_fps` guards against division by zero on the first frame.
+- **Config-driven setup** — all tunable parameters (webcam index, resolution, confidence threshold, unattended-seconds threshold) are declared as named constants at the top of `main()` rather than scattered through the codebase.
 
 ---
 
 ## License
 
-MIT — use it, learn from it, build on it.
+MIT (placeholder — no `LICENSE` file is currently included in the repository).

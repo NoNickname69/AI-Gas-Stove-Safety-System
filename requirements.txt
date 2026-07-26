@@ -1,26 +1,8 @@
-# requirements.txt — AI Gas Stove Safety System
-# -----------------------------------------------
-# Install everything with:
-#   pip install -r requirements.txt
-#
-# Python >= 3.10 recommended (for the X | Y type-union syntax used in logic.py)
-
 # Core computer vision
-opencv-python>=4.8.0
+opencv-python
 
-# YOLOv8 — installs torch, torchvision, and Ultralytics automatically
-ultralytics>=8.0.0
+# YOLOv8 
+Ultralytics
 
 # Numerical computing (usually installed as a dependency, listed explicitly)
-numpy>=1.24.0
-
-# ── Optional (uncomment to enable) ────────────────────────────────────────
-
-# Audible alerts
-# playsound==1.2.2
-
-# Telegram notifications
-# python-telegram-bot>=20.0
-
-# HTTP requests (for Pushover / webhook alerts)
-# requests>=2.31.0
+numpy

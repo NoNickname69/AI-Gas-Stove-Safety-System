@@ -1,26 +1,7 @@
-"""
-detector.py — Object Detection Module
-AI Gas Stove Safety System
-
-Wraps YOLOv8 inference into a clean, reusable Detector class.
-
-Design notes:
-  - YOLOv8n (nano) is used for speed on CPU.  Swap to yolov8s.pt or a
-    custom-trained model simply by changing `model_path` in main.py.
-  - COCO-80 does not contain a "fire" class.  We simulate fire detection
-    here using a simple HSV colour heuristic so the full pipeline works
-    end-to-end.  A real deployment would swap this for a fine-tuned YOLO
-    model trained on fire/flame data (see README — Future Improvements).
-"""
-
 import cv2
 import numpy as np
 from ultralytics import YOLO
 
-
-# ── COCO class names we care about ────────────────────────────────────────
-# YOLOv8n is pre-trained on the 80-class COCO dataset.
-# We only act on "person"; fire is handled by our colour heuristic below.
 COCO_CLASSES_OF_INTEREST = {"person"}
 
 
@@ -32,16 +13,20 @@ class Detector:
     Each detection dict has the shape:
         {
             "label":      str,          # e.g. "person" or "fire"
-            "confidence": float,        # 0.0 – 1.0
+            "confidence": float,        # 0.0 - 1.0
             "bbox":       (x1,y1,x2,y2) # pixel coordinates, int
         }
     """
 
-    def __init__(self, model_path: str = "models/yolov8n.pt", confidence: float = 0.4):
+    def __init__(
+            self,
+            model_path: str = "models/yolov8n.pt", 
+            confidence: float = 0.4,
+            ):
         """
         Args:
-            model_path:  Path to the .pt weights file.
-                         If the file doesn't exist, Ultralytics auto-downloads it.
+            model_path: Path to the .pt weights file.
+                        If the file doesn't exist, Ultralytics auto-downloads it.
             confidence:  Minimum confidence score to keep a detection.
         """
         self.confidence = confidence
@@ -53,11 +38,12 @@ class Detector:
         print(f"[Detector] Model loaded: {model_path}")
         print(f"[Detector] Confidence threshold: {confidence}")
 
-    # ------------------------------------------------------------------ #
-    #  Public API                                                         #
-    # ------------------------------------------------------------------ #
-
-    def detect(self, frame: np.ndarray) -> list[dict]:
+    #  Public API
+    
+    def detect(
+            self,
+            frame: np.ndarray,
+            ) -> list[dict]:
         """
         Run detection on a single BGR frame.
 
@@ -66,23 +52,22 @@ class Detector:
         """
         detections = []
 
-        # ── 1. YOLOv8 inference (for "person" and other COCO classes) ─
+        # YOLO --- Person detection
         yolo_detections = self._run_yolo(frame)
         detections.extend(yolo_detections)
 
-        # ── 2. Colour-based fire heuristic ─────────────────────────────
-        #    Simulates fire detection until a custom model is trained.
-        #    Replace this section with a real fire-detection model later.
+        # HSV --- Fire detection
         fire_detections = self._detect_fire_heuristic(frame)
         detections.extend(fire_detections)
 
         return detections
 
-    # ------------------------------------------------------------------ #
-    #  Private helpers                                                    #
-    # ------------------------------------------------------------------ #
+    #  Private helpers
 
-    def _run_yolo(self, frame: np.ndarray) -> list[dict]:
+    def _run_yolo(
+            self,
+            frame: np.ndarray,
+            ) -> list[dict]:
         """
         Run YOLOv8 and filter for classes we care about (COCO_CLASSES_OF_INTEREST).
         """
@@ -111,7 +96,10 @@ class Detector:
 
         return detections
 
-    def _detect_fire_heuristic(self, frame: np.ndarray) -> list[dict]:
+    def _detect_fire_heuristic(
+            self,
+            frame: np.ndarray,
+            ) -> list[dict]:
         """
         Colour-based flame detector using HSV thresholding.
 
@@ -122,18 +110,18 @@ class Detector:
                 * treat it as a flame detection.
                 * This is intentionally simple — it's a placeholder that makes the pipeline functional without a trained fire model.
             It WILL false-positive on brightly lit orange/red objects.
-            Replace with a custom YOLOv8 fire model for production use.
+            **Replace with a custom YOLOv8 fire model for production use.**
         """
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        # HSV ranges for fire colours (orange → yellow → bright red)
+        # HSV ranges for fire colours (orange -> yellow -> bright red)
         fire_lower1 = np.array([0, 80, 80], dtype=np.uint8)
         fire_upper1 = np.array([35, 255, 255], dtype=np.uint8)
 
         fire_lower2 = np.array([155, 80, 80], dtype=np.uint8)
         fire_upper2 = np.array([180, 255, 255], dtype=np.uint8)
 
-        # ── BLUE GAS FLAME ────────────────────────────
+        # Blue Gas Flames
         blue_lower = np.array([90, 80, 80], dtype=np.uint8)
         blue_upper = np.array([140, 255, 255], dtype=np.uint8)
 

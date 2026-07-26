@@ -1,30 +1,8 @@
-"""
-ui.py — User Interface / Overlay Module
-AI Gas Stove Safety System
-
-All OpenCV drawing happens here.  main.py calls draw_ui() once per frame
-and receives the annotated frame back.  Keeping drawing logic in one file
-means you can reskin the UI without touching any other module.
-
-Overlay layout:
-  ┌──────────────────────────────────────────────────────┐
-  │ [STATUS PANEL — top-left]                            │
-  │  FLAME  : DETECTED / NOT DETECTED                    │
-  │  PERSON : DETECTED / NOT DETECTED                    │
-  │  RISK   : NORMAL / HIGH                              │
-  │  FPS    : XX.X                                       │
-  │                                                      │
-  │  [Bounding boxes on detected objects]                │
-  │                                                      │
-  │  [WARNING BANNER — bottom, only when HIGH risk]      │
-  └──────────────────────────────────────────────────────┘
-"""
-
 import cv2
 import numpy as np
 
 
-# ── Colour palette (BGR) ───────────────────────────────────────────────────
+# Colour palette (BGR)
 COLOUR_GREEN  = (0,   220,   0)
 COLOUR_RED    = (0,    30, 220)
 COLOUR_ORANGE = (0,   140, 255)
@@ -38,6 +16,7 @@ LABEL_COLOURS = {
     "person": COLOUR_GREEN,
     "fire":   COLOUR_RED,
 }
+
 DEFAULT_LABEL_COLOUR = COLOUR_ORANGE
 
 
@@ -58,31 +37,32 @@ def draw_ui(
         detections      : List of detection dicts from detector.py.
         flame_detected  : Whether flame is present this frame.
         person_detected : Whether a person is present this frame.
-        risk_level      : "NORMAL" | "MEDIUM" | "HIGH"
+        risk_level      : "NORMAL" | "HIGH"
         warning_message : Alert text (empty string if NORMAL).
         fps             : Frames per second to display.
 
     Returns:
         Annotated BGR frame.
     """
-    # Draw in layers — back-to-front so text is on top of boxes
+    # Draw in layers, back-to-front so text is on top of boxes
+
     _draw_bounding_boxes(frame, detections)
     _draw_status_panel(frame, flame_detected, person_detected, risk_level, fps)
 
     if risk_level == "HIGH":
         _draw_warning_banner(frame, warning_message)
 
-    # Subtle watermark in bottom-right corner
+    # Watermark in bottom-right corner
     _draw_watermark(frame)
 
     return frame
 
+# Private drawing helpers
 
-# ─────────────────────────────────────────────────────────────────────────── #
-#  Private drawing helpers                                                     #
-# ─────────────────────────────────────────────────────────────────────────── #
-
-def _draw_bounding_boxes(frame: np.ndarray, detections: list[dict]) -> None:
+def _draw_bounding_boxes(
+        frame: np.ndarray, 
+        detections: list[dict],
+) -> None:
     """
     Draw a bounding box + label chip for every detection.
     """
@@ -91,7 +71,7 @@ def _draw_bounding_boxes(frame: np.ndarray, detections: list[dict]) -> None:
         confidence = det["confidence"]
         x1, y1, x2, y2 = det["bbox"]
 
-        colour = LABEL_COLOURS.get(label, DEFAULT_LABEL_COLOUR)
+        colour = LABEL_COLOURS.get(label, DEFAULT_LABEL_COLOUR) # Orange as default colour
 
         # Box
         cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
@@ -126,10 +106,10 @@ def _draw_status_panel(
     Draw the semi-transparent status panel in the top-left corner.
 
     Panel contains:
-      • FLAME status
-      • PERSON status
-      • RISK level
-      • FPS counter
+        FLAME status
+        PERSON status
+        RISK level
+        FPS counter
     """
     panel_x, panel_y = 15, 15
     line_height       = 30
@@ -196,7 +176,7 @@ def _draw_warning_banner(frame: np.ndarray, message: str) -> None:
         colour=(0, 0, 180), alpha=0.75
     )
 
-    # "⚠ WARNING" tag
+    # " WARNING" tag
     cv2.putText(
         frame, "WARNING",
         (20, h - banner_h + 28),
@@ -234,10 +214,7 @@ def _draw_watermark(frame: np.ndarray) -> None:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────── #
-#  Utility                                                                     #
-# ─────────────────────────────────────────────────────────────────────────── #
-
+# Utility
 def _draw_translucent_rect(
     frame:  np.ndarray,
     x1: int, y1: int,
